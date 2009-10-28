@@ -1,0 +1,27 @@
+
+            Handbook parts 2 blogger manual posts
+
+     An htmled sub-project
+     Requirements Statement
+
+This document is the Personal Software Process (PSP) Requirements Statement 
+for the htmled sub-project Handbook parts 2 blogger manual posts. It defines 
+in a clear and unambiguous way the requirements for this sub-project.
+
+1. Based on the existing htmled program, make a program that processes a real 
+   Handbook file and extracts its information into a tree of DailyEntries and 
+   SubjectEntries objects.
+
+2. It must be possible to extract selected well formed posts from these entries 
+   for easy, although manual posting them in a blogger (www.blogger.com) 
+   weblog.
+
+3. I'll be the primary user of this htmled project and I want to use it to 
+   make posting to my two weblogs - idiota and Argonaut's Life - from my 
+   corresponding Handbooks easier. A requirement is therefore to make the next 
+   update of the blogs with the htmled system.
+
+4. A "well formed post" extracted from a SubjectEntry has a title, a name for 
+   HTML referencing and contents in HTML format (not full document) without 
+   "newline" characters.
+
