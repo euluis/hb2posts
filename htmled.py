@@ -6,6 +6,29 @@ import unittest
 from datetime import date
 import re
 
+def getHbFileName(filename):
+    import os.path
+    """getHbFileName(filenameAsString) -> str
+    
+    Given a HbFile filename as a string, determine its filename as a string
+    without any path part, i.e., getHbFileName('path/to/filename.html') -> 'filename.html'
+    """
+    return os.path.basename(filename)
+
+class TestsForGetHbFileName(unittest.TestCase):
+    """Unit tests for the HbFile class."""
+    def testFileNameWithoutPath(self):
+        self.assertEquals('filename.html', getHbFileName('filename.html'))
+    
+    def testFileNameWithAbsolutePath(self):
+        self.assertEquals('x.y', getHbFileName('/foo/bar/x.y'))
+    
+    def testFileNameWithRelativePath(self):
+        self.assertEquals('name.ext', getHbFileName('../foo/bar/name.ext'))
+    
+    def testFileNameWithoutExtAbsolutePath(self):
+        self.assertEquals('name', getHbFileName('/absolute/path/name'))
+
 class HbFile:
     """A Handbook file, which contains daily entries."""
     def __init__(self, f):
@@ -20,6 +43,10 @@ class HbFile:
     def parseHbFile(self):
         parser = HbFileParser(self.f)
         self.dailyEntries = parser.parse()
+
+    def getFileName(self):
+        assert self.f.name != None
+        return getHbFileName(self.f.name)
 
 
 class HbDailyEntry:
@@ -36,7 +63,6 @@ class HbSubjectEntry:
     def __init__(self, title, name = None):
         self.title = title
         self.name = name
-
 
 # Unit tests for the HbFile class.
 class HbFileTest(unittest.TestCase):
@@ -88,15 +114,15 @@ class HbFileTest(unittest.TestCase):
         self.assertEquals('<p>The first sentence. The second sentence.</p>',
                           des[2].subjects[0].contents)
 
-
-
 class Post:
-    """A weblog post"""
-    def __init__(self, date, title, contents, subjname):
+    """A weblog post."""
+    def __init__(self, date, title, contents, subjname, hbfname):
         self.date = date
         self.title = title
         self.contents = contents
         self.subjname = subjname
+        self.hbfname = hbfname
+        self.setPostNames()
 
     def __str__(self):
         return 'Date: ' + str(self.date) + '\n' + 'Title: ' + self.title + \
@@ -139,12 +165,31 @@ class Post:
     def wordToRemove(self, w):
         return w == 'a' or w == 'the' or w == 'ndash'
 
+    def setPostNames(self):
+        """setPostNames()
+        
+        Add attribute names, containing the HTML referenceable
+        names contained in the post.
+        """
+        assert(dir(self).count('names') == 0)
+        self.names = []
+        start = 0
+        namePos = -1
+        if self.contents:
+            namePos = self.contents.find('<a name="', start)
+        while namePos != -1:
+            nameStart = self.contents.find('"', namePos) + 1
+            name = self.contents[nameStart: self.contents.find('"', nameStart)]
+            self.names.append(name)
+            namePos = self.contents.find('<a name="', nameStart)
+
 
 class TestPost(unittest.TestCase):
     def setUp(self):
         self.title = 'The Title!'
         self.date = date.today()
-        self.post = Post(self.date, self.title, 'contents', 'name')
+        self.post = Post(self.date, self.title, 'contents', 'name',
+                         'hbfilename.html')
     
     def testStr(self):
         self.assertTrue(str(self.post).count(str(self.date)) == 1)
@@ -159,7 +204,7 @@ class TestPost(unittest.TestCase):
                                    year, month, day):
         d = date(year, month, day)
         self.assertEquals(Post.BlogURL + expectedVariablePermalinkPart,
-                          Post(d, title, '', 'name').getPermaLink())
+                          Post(d, title, '', 'name', '').getPermaLink())
     
     def testGetPermaLink4BlogExample01(self):
         self.assertCorrectPostPermalink('2006/02/am-i-software-engineer.html',
@@ -214,31 +259,37 @@ class TestPost(unittest.TestCase):
                                         2009, 9, 21)
 
     def test__hash__fullyInitializedPost(self):
-        post = Post(date(2009, 10, 2), 'title', 'contents', 'name')
+        post = Post(date(2009, 10, 2), 'title', 'contents', 'name', '')
         self.assertTrue(isinstance(post.__hash__(), int))
 
     def test__hash__NoneInitializedPost(self):
-        post = Post(None, None, None, None)
+        post = Post(None, None, None, None, None)
         self.assertTrue(isinstance(post.__hash__(), int))
 
     def test__hash__PostWithDateButWithNoneTitle(self):
-        post = Post(date(2009, 10, 2), None, None, None)
+        post = Post(date(2009, 10, 2), None, None, None, None)
         self.assertTrue(isinstance(post.__hash__(), int))
-    
 
-# The PostExtractor class
+
 class PostExtractor:
     """The PostExtractor class extracts Posts from HbFile instances."""
-    def __init__(self, hbf = None):
-        self.hbf = hbf
+    def __init__(self, *hbfs):
+        """PostExtractor([hbf1[,hbf2[,hbf3[...]]]]) -> postExtractor
+
+        Create a PostExtractor class to extract posts from the HbFile instances
+        it was given.
+        """
+        self.hbfs = hbfs
 
     def getPosts(self, d1 = None, d2 = None):
         posts = []
-        for de in self.hbf.dailyEntries:
-            for subj in de.subjects:
-                postTitle = self.stripTags(subj.title)
-                post = Post(de.date, postTitle, subj.contents, subj.name)
-                posts.append(post)
+        for hbf in self.hbfs:
+            for de in hbf.dailyEntries:
+                for subj in de.subjects:
+                    postTitle = self.stripTags(subj.title)
+                    post = Post(de.date, postTitle, subj.contents, subj.name,
+                                hbf.getFileName())
+                    posts.append(post)
         posts.sort()
         self.adaptPostsLinks(posts)
         if d1 != None and d2 != None:
@@ -248,52 +299,49 @@ class PostExtractor:
         if d2 != None:
             posts = [post for post in posts if d2 >= post.date]
         return posts
+    
+    HbfIntraLinkPattern = r'<a\s+href="(?P<filename>[^:]*?)#(?P<anchor>.+?)".*?>'
+
+    def searchHbfIntraLink(self, text):
+        return re.search(PostExtractor.HbfIntraLinkPattern, text, re.IGNORECASE)
+
+    def blogLinkFromHbfLink(self, posts, post, match):
+        """blogLinkFromHbfLink(posts, post.hbfname, match) -> blogLink
+        
+        Get a blog link corresponding to the handbook file link in match that
+        belongs to a post which file in named post.hbfname, by looking in all
+        posts for the name. In principle posts should contain a reference to
+        the post from where match comes from, to resolve intra-post links.
+        If it isn't successful in finding something, it returns match.group()
+        (i.e., the original link). Oh(!), match is a re.MatchObject instance
+        resulting from a search with PostExtractor.HbfIntraLinkPattern.
+        """
+        filePath = post.hbfname
+        if len(match.group('filename')) > 0:
+            filePath = match.group('filename')
+        relevantPosts = [p for p in posts if p.hbfname == filePath]
+        link = match.group()
+        if match.group('anchor') in post.names and len(match.group('filename')) == 0:
+            return link
+        for post in relevantPosts:
+            if post.subjname == match.group('anchor'):
+                return link[:match.start('filename') - match.start()] + \
+                    post.getPermaLink() + link[match.end('anchor') - match.start():]
+            elif match.group('anchor') in post.names:
+                return link[:match.start('filename') - match.start()] + \
+                    post.getPermaLink() + link[match.end('filename') - match.start():]
+        return link
 
     def adaptPostsLinks(self, posts):
         """adaptPostsLinks(self, posts)
+
         Adapt the links contained in the posts so that they work in the blog.
-        TODO: handle inter-file links in the handbook.
-        """
-        self.setPostsNames(posts)
-        for post in posts:
-            start = 0
-            internalLinkPos = post.contents.find('<a href="#', start)
-            while internalLinkPos != -1:
-                nameStart = post.contents.find('#', internalLinkPos) + 1
-                name = post.contents[nameStart:post.contents.find('"', nameStart)]
-                if post.names.count(name) > 0:
-                    internalLinkPos = post.contents.find('<a href="#', nameStart)
-                    continue
-                linkedPost = self.getLinkedPost(posts, name)
-                # if found replace the link with a link to the other post
-                if linkedPost:
-                    linkReplacer = linkedPost.getPermaLink()
-                    if linkedPost.subjname != name:
-                        linkReplacer += '#' + name
-                    post.contents = post.contents.replace('#' + name, linkReplacer, nameStart - 3)
-                internalLinkPos = post.contents.find('<a href="#', nameStart)
-
-    def setPostsNames(self, posts):
-        """setPostsNames(posts)
-        Add attribute names to all posts, containing the HTML referenceable
-        names contained in the posts.
         """
         for post in posts:
-            assert(dir(post).count('names') == 0)
-            post.names = []
-            start = 0
-            namePos = post.contents.find('<a name="', start)
-            while namePos != -1:
-                nameStart = post.contents.find('"', namePos) + 1
-                name = post.contents[nameStart: post.contents.find('"', nameStart)]
-                post.names.append(name)
-                namePos = post.contents.find('<a name="', nameStart)
-
-    def getLinkedPost(self, posts, name):
-        for post in posts:
-            if post.subjname == name or post.names.count(name) > 0:
-                return post
-        return None
+            post.contents = re.sub(PostExtractor.HbfIntraLinkPattern,
+                                   lambda match: self.blogLinkFromHbfLink(posts,
+                                                                          post, match),
+                                   post.contents)
 
     def stripTags(self, text):
         """stripTags(text) -> textWithoutTags
@@ -314,16 +362,27 @@ class PostExtractor:
         return twt
 
 
-# Test cases for the PostExtractor class
 class TestPostExtractor(unittest.TestCase):
+    """Test cases for the PostExtractor class."""
     def setUp(self):
-        self.hbf = HbFile(open('dummy_hbfile.html'))
+        self.f1 = file('dummy_hbfile.html')
+        self.f2 = file('dummy_hbfile2.html')
+        self.hbf = HbFile(self.f1)
         self.pe = PostExtractor(self.hbf)
+
+    def tearDown(self):
+        self.f1.close()
+        self.f2.close()
     
     def testCreate(self):
         pe = PostExtractor()
-        assert pe.hbf == None
-        assert self.pe.hbf == self.hbf
+        self.assertEquals(0, len(pe.hbfs))
+        assert self.pe.hbfs[0] == self.hbf
+
+    def testCreateWithListOfHbFiles(self):
+        self.hbf2 = HbFile(self.f2)
+        self.pe = PostExtractor(self.hbf, self.hbf2)
+        self.assertEquals(2, len(self.pe.hbfs))
 
     def testGetPosts(self):
         des = self.hbf.dailyEntries
@@ -357,6 +416,52 @@ class TestPostExtractor(unittest.TestCase):
         self.assertEquals(1, len(posts))
         self.assertEquals(4, len(self.pe.getPosts(date(2010, 2, 6))))
 
+    def testPostTitleFreeOfTags(self):
+        subj = HbSubjectEntry('<code>Xpto</code> testing', 'subj_name')
+        subj.contents = 'some contents'
+        self.hbf.dailyEntries[1].subjects.append(subj)
+        self.pe = PostExtractor(self.hbf)
+        posts = self.pe.getPosts()
+        self.assertEquals('Xpto testing', posts[3].title)
+
+    def testBlogLinkFromInterHbfHbfLink(self):
+        postName = 'name'
+        hbfName = 'other-hb-file.html'
+        pe = PostExtractor()
+        match = pe.searchHbfIntraLink('<p>Non-linked text ' +
+                                      '<a href="' + hbfName + '#' + postName +
+                                      '">linked text</a></p>')
+        assert match, 'Unexpected match failure!'
+        otherHbfPost = Post(date(2009, 11, 6), 'post title', '<p>bla</p>',
+                            postName, hbfName)
+        post = Post(date(2009, 11, 1), 'title', 'x', 'postName', 'hbfile.html')
+        self.assertEquals('<a href="' + otherHbfPost.getPermaLink() + '">',
+                          pe.blogLinkFromHbfLink([otherHbfPost],
+                                                 post, match))
+
+    def testBlogLinkFromIntraHbfHbfLink(self):
+        postName = 'name'
+        hbfName = 'hbfile.html'
+        pe = PostExtractor()
+        match = pe.searchHbfIntraLink('<p>Non-linked text ' +
+                                      '<a href="#' + postName +
+                                      '" class="ligacao">linked text</a></p>')
+        assert match, 'Unexpected match failure!'
+        otherHbfPost = Post(date(2009, 11, 6), 'other post title', '<p>bla</p>',
+                            'other-post-name', 'other-hb-file.html')
+        hbfPost = Post(date(2009, 12, 1), 'hbf post title', '<p>bla</p>',
+                       postName, hbfName)
+        self.assertEquals('<a href="' + hbfPost.getPermaLink() + '" class="ligacao">',
+                          pe.blogLinkFromHbfLink([hbfPost, otherHbfPost],
+                                                 hbfPost, match))
+
+    def testSearchHbfIntraLinkDoesntMatchHTTPLinks(self):
+        pe = PostExtractor()
+        match = pe.searchHbfIntraLink('<p>Non-linked text ' +
+                                      '<a href="http://acme.com#anchor' +
+                                      '" class="ligacao">linked text</a></p>')
+        assert not match, 'Unexpected match!'
+
     def testPostLinksAdapted(self):
         des = self.hbf.dailyEntries
         des[0].subjects[0].contents += '<p><a href="#2010-02-08">see this</a></p>'
@@ -377,29 +482,57 @@ class TestPostExtractor(unittest.TestCase):
         self.assertEquals(des[0].subjects[0].contents, contents0)
         self.assertEquals(['subj0_ancor'], posts[0].names)
         contents1 = posts[1].contents
-        self.assertEquals(1, contents1.count('<a href="' + \
-                                             posts[0].getPermaLink() + \
-                                             '#subj0_ancor">'))
+        linkTextToFind = '<a href="' + posts[0].getPermaLink() + '#subj0_ancor">'
+        self.assertEquals(1, contents1.count(linkTextToFind),
+                          '"' + linkTextToFind + '" not found in "' +
+                          contents1 + '".')
         self.assertEquals(['subj1_ancor'], posts[1].names)
         self.assertEquals(1, contents1.count('<a href="#subj1_ancor">see my ancor</a>'))
         contents2 = posts[2].contents
         self.assertEquals(1, contents2.count(posts[0].getPermaLink() + '#subj0_ancor"'))
         self.assertEquals(1, contents2.count(posts[1].getPermaLink() + '#subj1_ancor"'))
 
-    def testPostTitleFreeOfTags(self):
-        subj = HbSubjectEntry('<code>Xpto</code> testing', 'subj_name')
-        subj.contents = 'some contents'
-        self.hbf.dailyEntries[1].subjects.append(subj)
-        self.pe = PostExtractor(self.hbf)
-        posts = self.pe.getPosts()
-        self.assertEquals('Xpto testing', posts[3].title)
+    def testAdaptPostsLinksDoesntChangeIntraPostLinksAndHandlesInterPostLinks(self):
+        post1Name = 'post1-name'
+        hbf1Name = 'hbfile1.html'
+        post1Contents = '<p>bla <a href="#intra-post1-link">intra post 1 link</a>.' + \
+            ' <a name="intra-post1-link">post 1 anchor</a></p>'
+        post1 = Post(date(2009, 11, 6), 'Post 1 title', post1Contents, post1Name, hbf1Name)
+        post2Contents = '<p>bla <a href="' + hbf1Name + '#' + post1Name + \
+            '">link to post1</a></p>' + '<p><a href="' + hbf1Name + \
+            '#intra-post1-link">link to post1 anchor</a></p>'
+        post2 = Post(date(2009, 11, 9), 'Post 2 title', post2Contents, 'post2-name',
+                     'hbfile2.html')
+        PostExtractor().adaptPostsLinks([post1, post2])
+        self.assertEquals(post1Contents, post1.contents)
+        self.assertEquals(2, post2.contents.count(post1.getPermaLink()))
+        self.assertEquals(1, post2.contents.count(post1.getPermaLink() +
+                                                  '#intra-post1-link'))
+    
+    def testResolvesLinksBetweenHbFiles(self):
+        self.hbf2 = HbFile(self.f2)
+        self.pe = PostExtractor(self.hbf, self.hbf2)
+        postsFrom1stHbf = self.pe.getPosts(date(2010, 2, 6), date(2010, 2, 6))
+        postsFrom2ndHbf = self.pe.getPosts(date(2011, 2, 6), date(2011, 2, 6))
+        postWithIdiotaProfit2010 = [post for post in postsFrom1stHbf
+                                    if post.subjname == 'idiota_1st_mil'][0]
+        postWithIdiotaProfit2011 = [post for post in postsFrom2ndHbf
+                                    if post.subjname == 'idiota_10th_mil'][0]
+        self.assertEquals('Idiota gets 1 million euros profit',
+                          postWithIdiotaProfit2010.title)
+        self.assertEquals('Idiota gets 10 million euros profit',
+                          postWithIdiotaProfit2011.title)
+        assert -1 != postWithIdiotaProfit2011.contents.find(
+            postWithIdiotaProfit2010.getPermaLink()), \
+            'The permalink "' + postWithIdiotaProfit2010.getPermaLink() + \
+            '" was not found in "' + postWithIdiotaProfit2011.contents + '".'
  
 
 from HTMLParser import HTMLParser
 
-# Base state for the implementation of the Hand-book file parsing finite state
-# machine.
 class HbFileParsingState:
+    """Base state for the implementation of the Hand-book file parsing finite
+    state machine."""
     def __str__(self):
         return 'Base HbFileParsingState (Illegal)'
 
@@ -566,8 +699,7 @@ class SubjectEntryContentsHbFileParsingState(DailyEntryContentsHbFileParsingStat
 
 
 class HbFileParsing:
-    """Implements a Finite State Machine for the Handbook File Parser.
-    """
+    """Implements a Finite State Machine for the Handbook File Parser."""
     Idle = IdleHbFileParsingState()
     DailyEntry = DailyEntryHbFileParsingState()
     SubjectEntry = SubjectEntryHbFileParsingState()
@@ -652,8 +784,7 @@ class HbFileParsing:
 
 
 class HbFileParsingTest(unittest.TestCase):
-    """Test cases for the HbFileParsing class.
-    """
+    """Test cases for the HbFileParsing class."""
     def setUp(self):
         self.parsing = HbFileParsing(self)
         self.beginDailyEntryHeaderCalled = False
@@ -825,10 +956,6 @@ class HbFileParser(HTMLParser):
         titleStart = self.feededData.find('>', aStart) + 1
         assert titleStart > self.curSE.startPos
         titleEnd = self.feededData.find('</a>', titleStart)
-        if titleEnd >= self.curSE.endPos:
-            print 'titleEnd', titleEnd
-            print 'self.curSE.endPos', self.curSE.endPos
-            print self.feededData[self.curSE.startPos: self.curSE.endPos]
         assert titleEnd < self.curSE.endPos
         del self.curSE.startPos
         del self.curSE.endPos
@@ -881,11 +1008,10 @@ class HbFileParser(HTMLParser):
     def stripNewLines(self, text):
         lines = re.split('\\n', text)
         for i in range(0, len(lines) - 1):
-            if (len(lines[i])) > 0:
+            if len(lines[i]) > 0 and len(lines[i + 1]) > 0:
                 if not re.match('\\s', lines[i][-1:]) and \
-                   re.match('^\w', lines[i + 1]):
+                        not re.match('^<[phuo]', lines[i + 1], re.IGNORECASE):
                     lines[i] = lines[i] + ' '
-        def add_strs(s1, s2): return s1 + s2
         from functools import reduce
         return reduce(lambda s1, s2: s1 + s2, lines, '')
 
@@ -920,8 +1046,8 @@ class HbFileParser(HTMLParser):
         return strippedText
 
 
-# Unit tests for the HbFileParser class.
 class HbFileParserTest(unittest.TestCase):
+    """Unit tests for the HbFileParser class."""
     def setUp(self):
         self.parser = HbFileParser(None)
         self.p1 = self.makeParagraph(1)
@@ -973,7 +1099,7 @@ class HbFileParserTest(unittest.TestCase):
                          HbFileParser.TopoFundoNavigation + '\n'+ 
                          self.makeDailyEntryHeader('2006-03-21'))
         assert self.parser.dailyEntries[0].subjects[0].title == title
-        self.assertEquals(self.p1, self.parser.dailyEntries[0].subjects[0].contents)
+        assert self.parser.dailyEntries[0].subjects[0].contents.find(self.p1) != -1
         self.assertEquals(name, self.parser.dailyEntries[0].subjects[0].name)
                           
 
@@ -981,32 +1107,16 @@ class HbFileParserTest(unittest.TestCase):
         return '<h3><a name="' + name + '" class="ancora">' + title + '</a></h3>'
 
     def testParseH2H3H2Tags(self):
-        date1 = "2006-03-30"
-        date2 = "2006-03-31"
-        seName = "se_name"
-        seTitle = "SE Title"
-        self.parser.feed(self.makeDailyEntryHeader(date1) + '\n' +
-                         self.makeSubjectEntryHeader(seName, seTitle) + '\n' +
-                         self.p1 + '\n' + 
-                         self.makeDailyEntryHeader(date2) + '\n')
+        self.parser.feed(self.makeDailyEntryHeader('2006-03-30') + '\n' +
+                         self.makeSubjectEntryHeader('se_name', 'SE Title') +
+                         '\n' + self.p1 + '\n' + 
+                         self.makeDailyEntryHeader('2006-03-31') + '\n')
         self.assertEquals(2, len(self.parser.dailyEntries))
 
     def testStripTopoFundoNavigation(self):
         contents = self.p1 + HbFileParser.TopoFundoNavigation
         self.assertEquals(self.p1,
                           self.parser.stripTopoFundoNavigation(contents))
-
-    def testStripTitleOfNewlines(self):
-        date1 = "2006-04-10"
-        date2 = "2006-04-11"
-        seName = "se_name"
-        seTitle = "SE \nTitle\n"
-        self.parser.feed(self.makeDailyEntryHeader(date1) + '\n' +
-                         self.makeSubjectEntryHeader(seName, seTitle) + '\n' +
-                         self.p1 + '\n' +
-                         self.makeDailyEntryHeader(date2) + '\n')
-        self.assertEquals('SE Title',
-                          self.parser.dailyEntries[0].subjects[0].title)
 
     def testStripNewlinesWithoutTrailingWhitespaceDoesntColateWords(self):
         textWithNewlines = "Line1\nLast line \n"
@@ -1018,47 +1128,59 @@ class HbFileParserTest(unittest.TestCase):
         self.assertEquals('Line1<pre>X\nY</pre>Last line ',
                           self.parser.stripNewLinesOutsideOfPreElements(textWithNewlines))
 
+    def assertParsingOfSubjectEntryTitleEquals(self, titleToParse,
+                                               expectedParsedTitle):
+        self.parser.feed(self.makeDailyEntryHeader("2006-04-10") + '\n' +
+                         self.makeSubjectEntryHeader("se_name", titleToParse) +
+                         '\n' + self.p1 + '\n')
+        self.assertEquals(expectedParsedTitle,
+                          self.parser.dailyEntries[0].subjects[0].title)
+        
+    def testStripTitleOfNewlines(self):
+        self.assertParsingOfSubjectEntryTitleEquals('SE \nTitle\n',
+                                                    'SE Title')
+
     def testStripTitleOfNewlinesWithoutTrailingWhitespace(self):
-        date1 = "2006-04-10"
-        seName = "se_name"
-        seTitle = "SE\nTitle\n"
-        self.parser.feed(self.makeDailyEntryHeader(date1) + '\n' +
-                         self.makeSubjectEntryHeader(seName, seTitle) + '\n' +
-                         self.p1 + '\n')
-        self.assertEquals('SE Title',
-                          self.parser.dailyEntries[0].subjects[0].title)
+        self.assertParsingOfSubjectEntryTitleEquals('SE\nTitle\n',
+                                                    'SE Title')
 
-    def test_parse_SubjectEntry_with_code_tag_in_header(self):
+    def testStripTitleOfNewlinesWithNewlineInTitle(self):
+        self.assertParsingOfSubjectEntryTitleEquals('The title with \n newline',
+                                                    'The title with  newline')
+
+    def testParseSubjectEntryWithCodeTagInTitle(self):
         title = '<code>Xpto</code> testing'
-        name = 'se_name'
-        self.parser.feed(self.makeDailyEntryHeader('2006-05-02') + '\n' +
-                         self.makeSubjectEntryHeader(name, title) + '\n' +
-                         self.p1 + '\n' +
-                         HbFileParser.TopoFundoNavigation + '\n' +
-                         self.makeDailyEntryHeader('2006-05-03'))
-        self.assertEquals(title, self.parser.dailyEntries[0].subjects[0].title)
+        self.assertParsingOfSubjectEntryTitleEquals(title, title)
 
-    def test_parse_SubjectEntry_with_newline_in_header(self):
-        title = 'The title with \n newline'
-        name = 'se_name'
+    def assertTextFoundInContestsOfWrappedSubjectEntryContainingText(self,
+                                                                     textToPlaceInSubjectEntry,
+                                                                     textToFind):
         self.parser.feed(self.makeDailyEntryHeader('2006-05-02') + '\n' +
-                         self.makeSubjectEntryHeader(name, title) + '\n' +
-                         self.p1 + '\n' +
-                         HbFileParser.TopoFundoNavigation + '\n' +
+                         self.makeSubjectEntryHeader('name', 'The title') + '\n' +
+                         self.p1 + '\n' + textToPlaceInSubjectEntry +
                          self.makeDailyEntryHeader('2006-05-03'))
-        self.assertEquals('The title with  newline',
-                          self.parser.dailyEntries[0].subjects[0].title)
+        contents = self.parser.dailyEntries[0].subjects[0].contents
+        self.assertTrue(contents.find(textToFind) != -1,
+                        'No match for "' + textToFind + '" in "' + contents +
+                        '".')
 
     def test_PRE_element_contents_arent_changed(self):
         pre = "<pre>  line1 of PRE\n  line2 of PRE</pre>"
-        self.parser.feed(self.makeDailyEntryHeader('2006-05-02') + '\n' +
-                         self.makeSubjectEntryHeader('name', 'The title') + '\n' +
-                         self.p1 + '\n' +
-                         pre +
-                         self.makeDailyEntryHeader('2006-05-03'))
-        contents = self.parser.dailyEntries[0].subjects[0].contents
-        self.assertTrue(contents.find(pre) != -1,
-                        'No match for "' + pre + '" in "' + contents + '".')
+        self.assertTextFoundInContestsOfWrappedSubjectEntryContainingText(pre, pre)
+
+    def test_line_without_trailing_whitespace_followed_by_A_tag_isnt_colated(self):
+        linkLine = '<a href="#a-name">linked text</a>,'
+        pWithLink = '<p>line of text\n' + linkLine + '\nline2 of text</p>'
+        expectedLink = ' ' + linkLine + ' '
+        self.assertTextFoundInContestsOfWrappedSubjectEntryContainingText(pWithLink,
+                                                                          expectedLink)
+
+    def test_line_without_trailing_whitespace_followed_by_non_alpha_char_isnt_colated(self):
+        parenLine = '(text within parens),'
+        pWithParenLine = '<p>line of text\n' + parenLine + '\nline2 of text</p>'
+        expectedParenLine = ' ' + parenLine + ' '
+        self.assertTextFoundInContestsOfWrappedSubjectEntryContainingText(pWithParenLine,
+                                                                          expectedParenLine)
 
 
 if __name__ == "__main__":
