@@ -956,6 +956,8 @@ class HbFileParser(HTMLParser):
         titleStart = self.feededData.find('>', aStart) + 1
         assert titleStart > self.curSE.startPos
         titleEnd = self.feededData.find('</a>', titleStart)
+        if titleEnd >= self.curSE.endPos:
+            print '\n' + self.feededData[self.curSE.startPos: self.curSE.endPos]
         assert titleEnd < self.curSE.endPos
         del self.curSE.startPos
         del self.curSE.endPos
