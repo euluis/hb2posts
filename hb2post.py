@@ -29,7 +29,7 @@ class CadernosOptions:
         if self.options.handbook == 'programacao':
             handbookDir = baseHandbooksDir + 'programacao/'
             filenames = [handbookDir + 'parte01.html']
-            for i in range(2,5):
+            for i in range(2,6):
                 filenames.append(handbookDir + 'ficheiro0' + str(i) + '.html')
             return filenames
         pass
@@ -48,7 +48,7 @@ class CadernosOptions:
 
 class CadernosOptionsTest(unittest.TestCase):
     def options_hbfilenames_match_programacao_hb(self, options):
-        self.assertTrue(4 <= len(options.hbfilenames()))
+        self.assertTrue(5 <= len(options.hbfilenames()))
         reStr = '/cadernos/programacao/(?:parte|ficheiro){1}\d{2}.html'
         reCompiled = re.compile(reStr)
         for hbfn in options.hbfilenames():
