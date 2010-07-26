@@ -1,3 +1,4 @@
+# -*- mode: Python; coding: utf-8 -*-
 # Python file - http://www.python.org/
 
 # Automated tests for htmled module.
