@@ -28,7 +28,12 @@ class CadernosOptions:
             for i in range(2,6):
                 filenames.append(handbookDir + 'ficheiro0' + str(i) + '.html')
             return filenames
-        pass
+        else:
+            handbookDir = baseHandbooksDir + self.options.handbook + '/'
+            filenames = []
+            for i in range(1,3):
+                filenames.append(handbookDir + 'ficheiro0' + str(i) + '.html')
+            return filenames
 
     def parseIsoDate(self, strIsoDate):
         return datetime.strptime(strIsoDate, '%Y-%m-%d').date()

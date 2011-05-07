@@ -32,6 +32,20 @@ class CadernosOptionsTest(unittest.TestCase):
         self.assertDateEquals(date(2005,5,10), options.startdate())
         self.assertDateEquals(date(2005,10,31), options.enddate())
 
+    def options_hbfilenames_match_idiota_hb(self, options):
+        self.assertTrue(2 <= len(options.hbfilenames()))
+        reStr = '/cadernos/idiota/ficheiro0[12].html'
+        reCompiled = re.compile(reStr)
+        for hbfn in options.hbfilenames():
+            assert re.search(reCompiled, hbfn),\
+                "\"" + hbfn + "\" doesn't match the regular expression \"" + reStr + "\"."
+
+    def test_hbfilenames_idiota_default(self):
+        options = CadernosOptions(['--handbook', 'idiota'])
+        self.options_hbfilenames_match_idiota_hb(options)
+        self.assertDateEquals(date.today(), options.startdate())
+        self.assertDateEquals(date.today(), options.enddate())
+
 
 class HbFileAutoTest(unittest.TestCase):
     def setUp(self):
