@@ -4,6 +4,17 @@
      An htmled sub-project
      Requirements Statement
 
+# Copyright (c) 2006-2011 Contributors - see below
+# All rights reserved.
+# The use and distribution terms for this software are covered by the
+# Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+# which can be found in the file epl-v10.html at the root of this distribution.
+# By using this software in any fashion, you are agreeing to be bound by
+# the terms of this license.
+# You must not remove this notice, or any other, from this software.
+# Contributors:
+# - Luis Sergio Oliveira (euluis)
+
 This document is the Personal Software Process (PSP) Requirements Statement 
 for the htmled sub-project Handbook parts 2 blogger manual posts. It defines 
 in a clear and unambiguous way the requirements for this sub-project.
@@ -24,4 +35,3 @@ in a clear and unambiguous way the requirements for this sub-project.
 4. A "well formed post" extracted from a SubjectEntry has a title, a name for 
    HTML referencing and contents in HTML format (not full document) without 
    "newline" characters.
-
