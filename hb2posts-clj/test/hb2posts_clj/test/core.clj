@@ -23,4 +23,6 @@
     (are [expected-file-name file-name]
 	 (= expected-file-name (hb-file-name file-name))
 	 "filename.html" "filename.html"
-	 "x.y" "/foo/bar/x.y")))
+	 "x.y" "/foo/bar/x.y"
+	 "name.ext" "../foo/bar/name.ext"
+	 "name" "/absolute/path/name")))
