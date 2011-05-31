@@ -26,3 +26,12 @@
 	 "x.y" "/foo/bar/x.y"
 	 "name.ext" "../foo/bar/name.ext"
 	 "name" "/absolute/path/name")))
+
+(deftest hb2post-cmd-line-options
+  (testing "that cmd-line-options correctly processes start and end dates"
+    (are [expected-start-date expected-end-date cmd-line]
+	 (let [{start-date :start-date end-date :end-date :as options}
+	       (cmd-line-options cmd-line)]
+	   (and (= expected-start-date start-date)
+		(= expected-end-date end-date)))
+	 "2010-01-01" "2011-01-01" "--start-date 2010-01-01 --end-date 2011-01-01")))
