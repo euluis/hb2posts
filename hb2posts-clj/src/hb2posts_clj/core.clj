@@ -15,16 +15,31 @@
 ;; - Luis Sergio Oliveira (euluis)
 
 (ns hb2posts-clj.core
-  (:import (java.io File)))
+  (:import (java.io File)
+           (java.util Calendar Date)))
 
 (defn hb-file-name [file-name]
   (.getName (File. file-name)))
+
+(defn format-2d [n]
+  (if (>= n 10) (str n) (str "0" n)))
+
+(defn today [] (Date.))
+
+;;; WTF, Java doesn't have this!?!
+(defn format-iso [d]
+  (let [calendar (Calendar/getInstance)]
+    (str (. calendar get Calendar/YEAR) "-"
+         ;; WTF, stupid and wrong implementation!
+         (format-2d (+ 1 (. calendar get Calendar/MONTH))) "-"
+         (format-2d (. calendar get Calendar/DAY_OF_MONTH)))))
 
 (defn cmd-line-options [cmd-line]
   (into {} (map (fn [[option-key option-re]]
                   (let [option-matcher (re-matcher option-re cmd-line)]
                     [option-key
-                     (when (re-find option-matcher)
-                       (second (re-groups option-matcher)))]))
+                     (if (re-find option-matcher)
+                       (second (re-groups option-matcher))
+                       (format-iso (today)))]))
                 [[:start-date #"--start-date\s+(\d\d\d\d-\d\d-\d\d)"]
                  [:end-date #"--end-date\s+(\d\d\d\d-\d\d-\d\d)"]])))
