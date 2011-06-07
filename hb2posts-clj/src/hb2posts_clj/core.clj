@@ -15,16 +15,12 @@
 ;; - Luis Sergio Oliveira (euluis)
 
 (ns hb2posts-clj.core
-  (:import (java.io File))
-  (:require [clojure.string :as str]))
+  (:import (java.io File)))
 
 (defn hb-file-name [file-name]
   (.getName (File. file-name)))
 
 (defn cmd-line-options [cmd-line]
-  (->> (str/split cmd-line #"--start-date|--end-date")
-       (remove str/blank?)
-       (map str/trim))
   (into {} (map (fn [[option-key option-re]]
                   (let [option-matcher (re-matcher option-re cmd-line)]
                     [option-key
