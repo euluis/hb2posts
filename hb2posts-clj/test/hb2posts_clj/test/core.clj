@@ -38,4 +38,5 @@
          ;; FIXME: difficult to understand what went wrong when fails
          ;; FIXME: fragile around midnight
          ;; TODO: stub today implementation
-         (format-iso (today)) (format-iso (today)) "")))
+         (format-iso (today)) (format-iso (today)) ""
+         "2010-01-01" "2011-01-01" "--end-date 2011-01-01 --start-date 2010-01-01")))

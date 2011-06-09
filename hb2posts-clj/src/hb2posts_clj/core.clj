@@ -77,7 +77,4 @@ This is a *big TODO*."
                                         (second (re-groups option-matcher)))]
                        date
                        (format-iso (today)))]))
-                ;; FIXME: the above code is dependent of the seq I'm
-                ;; using. It works for vectors, but fails for lists, so
-                ;; I need to (into []) the map result.
-                (into [] (map create-cmd-line-option-key-re @*cmd-line-options*)))))
+                (map create-cmd-line-option-key-re @*cmd-line-options*))))
