@@ -65,7 +65,7 @@ This is a *big TODO*."
 (defn create-cmd-line-option-key-re
   [{cl-name :name cl-short-name :short-name cl-type :type :as cmd-line-option}]
   [(keyword cl-name)
-   (re-pattern (str "--" cl-name "\\s+("
+   (re-pattern (str "--" cl-name "[\\s+|=]("
                     iso-date-re ; TODO use cl-type
                     ")"))])
 
