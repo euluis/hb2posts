@@ -26,7 +26,7 @@ class CadernosOptions:
                           help='the start date of the date interval for which to get posts, inclusive')
         parser.add_option('-e', '--enddate', default=date.today().__str__(),
                           help='the end date of the date interval for which to get posts, inclusive')
-        parser.add_option('--handbook', default='programacao',
+        parser.add_option('-b', '--handbook', default='programacao',
                           help="the handbook from which you want to retrieve posts: "
                           "cpp, ensino, idiota, pessoal, programacao or web [default: %default")
         (self.options, args) = parser.parse_args(args)
