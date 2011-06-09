@@ -30,14 +30,17 @@
 (deftest hb2post-cmd-line-options
   (testing "that cmd-line-options correctly processes start and end dates"
     (are [expected-start-date expected-end-date cmd-line]
-	 (let [{start-date :start-date end-date :end-date :as options}
-	       (cmd-line-options cmd-line)]
-	   (and (= expected-start-date start-date)
-		(= expected-end-date end-date)))
-	 "2010-01-01" "2011-01-01" "--start-date 2010-01-01 --end-date 2011-01-01"
          ;; FIXME: difficult to understand what went wrong when fails
-         ;; FIXME: fragile around midnight
-         ;; TODO: stub today implementation
-         (format-iso (today)) (format-iso (today)) ""
+	 (let [{start-date :start-date end-date :end-date
+                :as options} (cmd-line-options cmd-line)
+                ;; FIXME: fragile around midnight
+                ;; TODO: stub today implementation
+               today-val (format-iso (today))
+               [actual-start-date actual-end-date] (map #(if (= today-val %) :today %)
+                                                        [start-date end-date])]
+	   (and (= expected-start-date actual-start-date)
+		(= expected-end-date actual-end-date)))
+	 "2010-01-01" "2011-01-01" "--start-date 2010-01-01 --end-date 2011-01-01"
+         :today :today ""
          "2010-01-01" "2011-01-01" "--end-date 2011-01-01 --start-date 2010-01-01"
-         "2010-01-01" (format-iso (today)) "--start-date=2010-01-01")))
+         "2010-01-01" :today "--start-date=2010-01-01")))
