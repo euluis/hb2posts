@@ -51,4 +51,5 @@
          "2010-01-01" "2011-01-01" "--end-date 2011-01-01 --start-date 2010-01-01"
          :today "2010-01-01" "--end-date=2010-01-01"
          ;; see TODO above, which this test replaces temporarily  
-         :today :today (str "--start-date=" (format-iso (today))))))
+         :today :today (str "--start-date=" (format-iso (today)))
+         "2010-12-31" "2011-01-01" "-s 2010-12-31 -e 2011-01-01")))

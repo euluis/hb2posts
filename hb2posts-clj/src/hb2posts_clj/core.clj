@@ -57,15 +57,15 @@ This is a *big TODO*."
       :valid
       (throw (Exception. "cmd-line-option-def: name is mandatory")))))
 
-(def *cmd-line-options* (ref [{:name "start-date" :type 'iso-date}
-                              {:name "end-date" :type 'iso-date}]))
+(def *cmd-line-options* (ref [{:name "start-date" :short-name "s" :type 'iso-date}
+                              {:name "end-date" :short-name "e" :type 'iso-date}]))
 
 (def iso-date-re #"\d\d\d\d-[0-1]\d-[0-3]\d")
 
 (defn create-cmd-line-option-key-re
   [{cl-name :name cl-short-name :short-name cl-type :type :as cmd-line-option}]
   [(keyword cl-name)
-   (re-pattern (str "--" cl-name "[\\s+|=]("
+   (re-pattern (str "(?:(?:-" cl-short-name ")|(?:--" cl-name "))[\\s+|=]("
                     iso-date-re ; TODO use cl-type
                     ")"))])
 
