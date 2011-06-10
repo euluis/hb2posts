@@ -33,8 +33,14 @@
          ;; FIXME: difficult to understand what went wrong when fails
 	 (let [{start-date :start-date end-date :end-date
                 :as options} (cmd-line-options cmd-line)
-                ;; FIXME: fragile around midnight
-                ;; TODO: stub today implementation
+                ;; FIXME: the following use of fn today is fragile around midnight
+                ;; TODO: an idea is to stub today implementation.
+                ;;       tried the following at top level without success
+                ;; (in-ns 'hb2posts-clj.core)
+                ;; (def today (fn [] "0000-01-01"))
+                ;; (in-ns 'hb2posts-clj.test.core)
+                ;; with the test
+                ;; :today :today "--start-date=0000-01-01"
                today-val (format-iso (today))
                [actual-start-date actual-end-date] (map #(if (= today-val %) :today %)
                                                         [start-date end-date])]
@@ -43,4 +49,6 @@
 	 "2010-01-01" "2011-01-01" "--start-date 2010-01-01 --end-date 2011-01-01"
          :today :today ""
          "2010-01-01" "2011-01-01" "--end-date 2011-01-01 --start-date 2010-01-01"
-         "2010-01-01" :today "--start-date=2010-01-01")))
+         :today "2010-01-01" "--end-date=2010-01-01"
+         ;; see TODO above, which this test replaces temporarily  
+         :today :today (str "--start-date=" (format-iso (today))))))
