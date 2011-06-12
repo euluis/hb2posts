@@ -27,7 +27,7 @@
 	 "name.ext" "../foo/bar/name.ext"
 	 "name" "/absolute/path/name")))
 
-(deftest hb2post-cmd-line-options
+(deftest cmd-line-options-start-end-dates-test
   (testing "that cmd-line-options correctly processes start and end dates"
     (are [expected-start-date expected-end-date cmd-line]
          ;; FIXME: difficult to understand what went wrong when fails
@@ -53,3 +53,10 @@
          ;; see TODO above, which this test replaces temporarily  
          :today :today (str "--start-date=" (format-iso (today)))
          "2010-12-31" "2011-01-01" "-s 2010-12-31 -e 2011-01-01")))
+
+(deftest cmd-line-options-handbook-test
+  (testing "that cmd-line-options correctly processes handbook option"
+    (are [expected-hb cmd-line]
+         (= expected-hb (:handbook (cmd-line-options cmd-line)))
+         "programacao" "")))
+

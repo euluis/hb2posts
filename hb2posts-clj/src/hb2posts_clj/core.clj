@@ -57,24 +57,35 @@ This is a *big TODO*."
       :valid
       (throw (Exception. "cmd-line-option-def: name is mandatory")))))
 
-(def *cmd-line-options* (ref [{:name "start-date" :short-name "s" :type 'iso-date}
-                              {:name "end-date" :short-name "e" :type 'iso-date}]))
+(def *cmd-line-options* (ref [{:name "start-date" :short-name "s" :type :iso-date
+                               :default #(format-iso (today))}
+                              {:name "end-date" :short-name "e" :type :iso-date
+                               :default #(format-iso (today))}
+                              {:name "handbook" :short-name "b"
+                               :default #(str "programacao")}]))
 
-(def iso-date-re #"\d\d\d\d-[0-1]\d-[0-3]\d")
+(defmulti cmd-line-type-re "returns the re for the type" identity)
+
+(defmethod cmd-line-type-re :iso-date [arg] #"\d\d\d\d-[0-1]\d-[0-3]\d")
+
+(defmethod cmd-line-type-re :string [arg] #"[\S]+")
+
+(defmethod cmd-line-type-re :default [arg] (cmd-line-type-re :string))
 
 (defn create-cmd-line-option-key-re
-  [{cl-name :name cl-short-name :short-name cl-type :type :as cmd-line-option}]
+  [{cl-name :name cl-short-name :short-name cl-type :type
+    cl-default :default :as cmd-line-option}]
   [(keyword cl-name)
    (re-pattern (str "(?:(?:-" cl-short-name ")|(?:--" cl-name "))[\\s+|=]("
-                    iso-date-re ; TODO use cl-type
-                    ")"))])
+                    (cmd-line-type-re cl-type) ")"))
+   cl-default])
 
 (defn cmd-line-options [cmd-line]
-  (into {} (map (fn [[option-key option-re]]
+  (into {} (map (fn [[option-key option-re option-default]]
                   (let [option-matcher (re-matcher option-re cmd-line)]
                     [option-key
-                     (if-let [date (and (re-find option-matcher)
+                     (if-let [match (and (re-find option-matcher)
                                         (second (re-groups option-matcher)))]
-                       date
-                       (format-iso (today)))]))
+                       match
+                       (option-default))]))
                 (map create-cmd-line-option-key-re @*cmd-line-options*))))
