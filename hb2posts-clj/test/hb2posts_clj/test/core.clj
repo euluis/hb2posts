@@ -56,7 +56,9 @@
 
 (deftest cmd-line-options-handbook-test
   (testing "that cmd-line-options correctly processes handbook option"
+    ;; TODO: add tests for invalid handbook option value
     (are [expected-hb cmd-line]
          (= expected-hb (:handbook (cmd-line-options cmd-line)))
-         "programacao" "")))
-
+         "programacao" ""
+         "programacao" "-b programacao"
+         "idiota" "--handbook=idiota")))
