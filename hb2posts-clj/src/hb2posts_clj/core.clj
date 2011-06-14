@@ -90,6 +90,5 @@ This is a *big TODO*."
                        (option-default))]))
                 (map create-cmd-line-option-key-re @*cmd-line-options*))))
 
-(defn -main [args]
-  (println (str "*command-line-args* = \"" *command-line-args* "\""))
-  (println (str "args = \"" args "\"")))
+(defn -main [& args]
+  (println (str (cmd-line-options (reduce #(str %1 " " %2) args)))))
