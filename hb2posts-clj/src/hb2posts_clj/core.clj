@@ -16,11 +16,24 @@
 
 (ns hb2posts-clj.core
   (:require [clojure.string :as str])
+  (:require [net.cgrand.enlive-html :as enlive])
   (:import (java.io File)
            (java.util Calendar Date)))
 
 (defn hb-file-name [file-name]
   (.getName (File. file-name)))
+
+(defn hb-filenames [hb-name]
+  (let [base-hbs-dir (str (java.lang.System/getenv "HOME") "/documentos/cadernos/")]
+    (if (= hb-name "programacao")
+      (let [hb-dir (str base-hbs-dir hb-name "/")]
+        (apply conj [(str hb-dir "parte01.html")]
+               (map #(str hb-dir "ficheiro0" % ".html") (range 2 6))))
+      ;; TODO: the remaining handbooks
+      )))
+
+(defn load-hb-file [filename]
+  (enlive/html-resource (. (File. filename) toURL)))
 
 (defn format-2d [n]
   (if (>= n 10) (str n) (str "0" n)))
@@ -92,4 +105,8 @@ This is a *big TODO*."
                 (map create-cmd-line-option-key-re @*cmd-line-options*))))
 
 (defn -main [& args]
-  (println (str (cmd-line-options (str/join " " args)))))
+  (println (str "command line options = " (cmd-line-options (str/join " " args))))
+  (let [options (cmd-line-options (str/join " " args))
+        filenames (hb-filenames (:handbook options))
+        contents (map load-hb-file filenames)]
+    (println (str contents))))
