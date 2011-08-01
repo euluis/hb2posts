@@ -35,6 +35,17 @@
 (defn load-hb-file [filename]
   (enlive/html-resource (. (File. filename) toURL)))
 
+(defn hb-entry->post [nodes]
+  (enlive/at (filter #(not (string? %)) nodes)
+             [:p]  (fn [nd]
+                     (let [node-content (:content nd)]
+                       (if (seq? node-content)
+                         (if (= (:content (first node-content)) '("topo"))
+                           nil
+                           nd)
+                         nd)))
+             [:h3] nil))
+
 (defn format-2d [n]
   (if (>= n 10) (str n) (str "0" n)))
 

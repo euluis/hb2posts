@@ -16,6 +16,7 @@
 
 (ns hb2posts-clj.test.core
   (:use [hb2posts-clj.core] :reload)
+  (:require [net.cgrand.enlive-html :as enlive])
   (:use [clojure.test]))
 
 (deftest basic-file-name-fns
@@ -62,3 +63,8 @@
          "programacao" ""
          "programacao" "-b programacao"
          "idiota" "--handbook=idiota")))
+
+(deftest hb-entry->post-transformation-test
+  (testing "that the transformation of hb-entry to post works as expected"
+    (is (= (enlive/html-snippet "<p>How to implement an Emacs minor mode? A good example is <code>flyspell-mode</code>, which source is available just C-h f <code>flyspell-mode</code> and following the link to the source.</p>")
+           (hb-entry->post (enlive/html-snippet "<h3><a name=\"emacs-html-auto-trans-accented-chars-2-entities-20101216\" class=\"ancora\">Improve Emacs\nHTML mode by adding an automatic translator between accented chars and their HTML / Unicode entities</a></h3>\n<p>How to implement an Emacs minor mode? A good example is <code>flyspell-mode</code>, which source is available just C-h f <code>flyspell-mode</code> and following the link to the source.</p>\n\n<p><a href=\"#topo\" class=\"ligacao\">topo</a> |\n <a href=\"#fundo\" class=\"ligacao\">fundo</a></p>"))))))
